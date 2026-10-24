@@ -1,0 +1,208 @@
+<!doctype html>
+<html lang="zh-CN"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>从零重做：BCG历史研究的荟萃分析</title><style>
+*{box-sizing:border-box}html{scroll-behavior:smooth}
+body{margin:0;background:#f3f6f8;color:#243746;font:16px/1.85 "Microsoft YaHei",system-ui,sans-serif}
+.layout{max-width:1480px;margin:auto;display:grid;grid-template-columns:275px minmax(0,1fr);gap:30px;padding:32px}
+nav{position:sticky;top:24px;align-self:start;max-height:calc(100vh - 48px);overflow:auto;font-size:13px;padding:18px 12px}
+nav strong{font-size:16px}nav ul{list-style:none;padding-left:14px}nav>div>ul{padding-left:0}nav li{margin:6px 0}
+a{color:#176b87;text-decoration:none}a:hover{text-decoration:underline}
+main{min-width:0;background:#fff;border-top:6px solid #176b87;padding:40px 48px;border-radius:4px}
+h1{font-size:30px;line-height:1.5;margin:0 0 24px}h2{font-size:24px;color:#176b87;margin:44px 0 18px;padding-bottom:10px;border-bottom:1px solid #dce6eb}
+h3{font-size:19px;margin-top:30px}h2,h3{scroll-margin-top:20px}
+p,li{overflow-wrap:anywhere}pre{overflow:auto;background:#eef3f6;border:1px solid #dde7ed;border-radius:6px;padding:18px;line-height:1.65;font-size:13px}
+code{font-family:Consolas,"Microsoft YaHei",monospace;background:#eef3f6;padding:2px 4px;border-radius:3px}pre code{padding:0;background:none}
+table{display:block;width:100%;overflow:auto;border-collapse:collapse;font-size:14px;margin:22px 0}th,td{text-align:left;border-bottom:1px solid #dce6eb;padding:10px 12px;min-width:120px}th{background:#edf5f8}td code{white-space:nowrap}
+blockquote{margin:20px 0;padding:6px 20px;border-left:4px solid #176b87;background:#edf5f8}img{max-width:100%}
+.toplink{display:block;margin:0 0 20px;font-size:13px;color:#617785}
+@media(max-width:1000px){.layout{display:block;padding:16px}nav{position:static;max-height:300px;margin-bottom:20px}main{padding:28px 22px}h1{font-size:25px}}
+@media print{nav,.toplink{display:none}.layout{display:block;padding:0}body{background:white}main{padding:0;border:0}pre{white-space:pre-wrap;overflow-wrap:anywhere}h2,h3{break-after:avoid}}
+</style></head>
+<body><div class="layout"><nav aria-label="指南目录"><strong>学习路线</strong><div class="toc">
+<ul>
+<li><a href="#0">0. 要回答的问题</a></li>
+<li><a href="#1">1. 安装与第一次运行</a></li>
+<li><a href="#2">2. 先认识研究级数据</a></li>
+<li><a href="#3-rr">3. 自己算一个RR和方差</a></li>
+<li><a href="#4">4. 构建效应量表和质量检查</a></li>
+<li><a href="#5-reml">5. 随机效应与REML</a></li>
+<li><a href="#6">6. 异质性与预测区间</a></li>
+<li><a href="#7">7. 预设敏感性分析</a></li>
+<li><a href="#8">8. 探索性元回归的正确边界</a></li>
+<li><a href="#9">9. 森林图、漏斗图与报告</a></li>
+<li><a href="#10">10. 验收与测试</a></li>
+<li><a href="#11">11. 常见问题和自测</a></li>
+</ul>
+</div>
+</nav>
+<main><a class="toplink" href="项目重做指南.md">可编辑 Markdown 原稿</a><h1 id="bcg">从零重做：BCG历史研究的荟萃分析</h1>
+<p>这个项目对应真实世界证据岗位中的“证据整理、统计分析、报告撰写”。你将学会四格表、RR/log(RR)、随机效应、异质性、森林图、预测区间及敏感性分析。</p>
+<p><a href="ANALYSIS_PLAN.md">分析规范</a>｜<a href="docs/DATA.md">数据字典</a>｜<a href="reports/REPORT.html">最终报告</a>｜<a href="learning/guide_examples.R">连续练习代码</a></p>
+<p><strong>范围先说清</strong>：我们复核既有公开13项研究数据集，没有完成新的系统检索、双人筛选或偏倚风险评级，因此不称“完成系统综述”。</p>
+<h2 id="0">0. 要回答的问题</h2>
+<p>这些历史研究中BCG组与对照组结核事件的RR如何？研究之间差异多大？改方差估计、限随机分配研究、逐一剔除研究后结论如何变化？</p>
+<p>不要只追求一个显著合并RR。合并效应、异质性、预测区间和数据边界需要一起呈现。建议四次学习：①四格表和RR；②随机效应；③敏感性/探索；④报告与复核。</p>
+<h2 id="1">1. 安装与第一次运行</h2>
+<p>本项目独立安装包到<code>.Rlibrary</code>，不改变全局R库。已经有本地仓库就跳过clone。</p>
+<pre><code class="language-powershell">git clone https://github.com/SRTURK/bcg-evidence-meta-analysis.git
+Set-Location bcg-evidence-meta-analysis
+&amp; 'C:\Program Files\R\R-4.6.0\bin\Rscript.exe' setup.R
+&amp; 'C:\Program Files\R\R-4.6.0\bin\Rscript.exe' run.R --out=learning/output --pause
+</code></pre>
+<p>R路径按安装版本修改。setup首次需要联网，后续分析离线可运行。测试环境R4.6.0、metafor5.2-1、metadat1.6-0，完整依赖见sessionInfo。二进制包可能提示由4.6.1构建，本次实际加载与测试通过；升级后仍须重新验收。</p>
+<p>输出目录reports为正式结果，learning/output为暂停练习。每个模块后Enter继续。Ctrl+C停止，重跑从头。</p>
+<p>在RStudio创建<code>learning/my_rebuild.R</code>，工作目录设仓库根目录。下面R代码块按顺序执行。若找不到包，先运行setup.R。</p>
+<pre><code class="language-r">if (.Platform$OS.type == 'windows') invisible(Sys.setlocale('LC_CTYPE','English_United States.utf8'))
+if(dir.exists('.Rlibrary')) .libPaths(c(normalizePath('.Rlibrary'),.libPaths()))
+options(stringsAsFactors=FALSE)
+args &lt;- character()
+out &lt;- 'learning/my_output'
+dir.create(out,recursive=TRUE,showWarnings=FALSE)
+source('config.R',encoding='UTF-8')
+source('R/helpers.R',encoding='UTF-8')
+set.seed(config$seed)
+library(metafor)
+</code></pre>
+<h2 id="2">2. 先认识研究级数据</h2>
+<pre><code class="language-r">preview &lt;- metadat::dat.bcg
+print(preview)
+table(preview$alloc)
+</code></pre>
+<p>一行是一项研究，不是一位患者。tpos/tneg是接种组事件/非事件，cpos/cneg是对照组。7项random、2项alternate、4项systematic，不能说“13项RCT”。</p>
+<p>不同研究的随访、入组和环境可能不同。没有人时信息，因此分析的是随访窗口内风险比，不是发生率比。357347只是报告人数相加，不宣称跨研究患者已经去重。</p>
+<h2 id="3-rr">3. 自己算一个RR和方差</h2>
+<pre><code class="language-r">a &lt;- 10; b &lt;- 90; c &lt;- 20; dd &lt;- 80
+toy_rr &lt;- (a/(a+b))/(c/(c+dd))
+toy_logrr &lt;- log(toy_rr)
+toy_var &lt;- 1/a-1/(a+b)+1/c-1/(c+dd)
+print(c(RR=toy_rr,logRR=toy_logrr,variance=toy_var))
+</code></pre>
+<p>RR=0.5；logRR约-0.69315；方差0.13。接种组事件比例10%，对照20%。对数尺度便于正态近似和加权，最后取exp返回RR。</p>
+<p>95%单研究区间：<code>exp(logRR ± 1.96*sqrt(variance))</code>。合并时不是直接平均各研究RR，也不是把所有事件人数相加后只算一个粗RR。</p>
+<h2 id="4">4. 构建效应量表和质量检查</h2>
+<pre><code class="language-r">source('R/01_data.R',encoding='UTF-8')
+print(d[c('trial','tpos','tneg','cpos','cneg','yi','vi','RR')])
+stopifnot(max(abs(d$manual_yi-d$yi))&lt;1e-12)
+</code></pre>
+<p><code>escalc(measure='RR')</code>生成yi=logRR和vi=方差；模块保留手算列，逐项核验。所有四格计数当前均大于0，设add=0，不做连续性校正。未来换数据出现0时先停下来选择方法，不能照抄一个0.5让它跑通。</p>
+<p>数据快照MD5也被检查；哈希只是变更检测，不证明历史文献数据绝对正确。</p>
+<h2 id="5-reml">5. 随机效应与REML</h2>
+<p>共同效应模型假定所有研究共享同一真实效应；随机效应允许各研究真实效应围绕一个平均值变化，研究间方差叫tau²。</p>
+<pre><code class="language-r">my_fit &lt;- rma(yi,vi,data=d,method='REML',test='knha')
+print(my_fit)
+print(predict(my_fit,transf=exp))
+</code></pre>
+<p>REML估计tau²，权重为1/(vi+tau²)。<code>test='knha'</code>使用Hartung-Knapp调整，不是把普通正态区间换个名称。13项研究时，均值区间需要考虑估计不确定性。</p>
+<pre><code class="language-r">source('R/02_pooling.R',encoding='UTF-8')
+my_weights &lt;- 1/(d$vi+fit$tau2)
+my_pooled_logrr &lt;- sum(my_weights*d$yi)/sum(my_weights)
+print(exp(my_pooled_logrr))
+print(sum(d$weight_percent))
+</code></pre>
+<p>预期合并RR约0.48942，KH95%区间0.33007-0.72570；权重合计100%。这一步还核验手算加权均值和包结果一致。</p>
+<h2 id="6">6. 异质性与预测区间</h2>
+<pre><code class="language-r">print(pooled[c('tau2','I2','Q','Q_p','prediction_low','prediction_high')])
+</code></pre>
+<p>tau²约0.31324，I²约92.22%，异质性较大。这里I²用metafor模型定义，不应再套另一种Q公式要求数值完全相同。</p>
+<p>预测区间约0.13588-1.76289，跨过1。均值效应区间不跨1与预测区间跨1可以同时成立：前者说平均真实效应，后者体现类似研究之间的分散。不能因此断言“每个地区效果都一样”或对个体给出接种效果预测。</p>
+<h2 id="7">7. 预设敏感性分析</h2>
+<pre><code class="language-r">source('R/03_sensitivity.R',encoding='UTF-8')
+print(sensitivity)
+print(loo)
+</code></pre>
+<p>三个角度：①用DL替代REML估计研究间方差，仍用KH推断；②只纳入7项random分配研究；③每次去掉一项研究，重新估计tau²和合并效应。</p>
+<p>参考：DL合并RR约0.48962；随机分配子集RR约0.37872，95%区间0.20386-0.70357。差异可能由研究人群、设计等共同造成，不能直接归因于随机化本身。</p>
+<p>逐一剔除不是删除“拖后腿”研究。全部13次结果应保留，不挑最显著的一次。研究规模很大也不自动意味着方法学质量最高。</p>
+<h2 id="8">8. 探索性元回归的正确边界</h2>
+<pre><code class="language-r">print(moderator_table)
+</code></pre>
+<p><code>mods=~I(ablat/10)</code>让系数表示绝对纬度增加10度时logRR的变化，系数约-0.2910。<code>I()</code>告诉公式把除以10当算术操作。</p>
+<p>这是研究层面的探索性关联。纬度可能与年代、设计、结核暴露等相关，存在生态偏差与混杂。不能把它解释成某个个体所在纬度的因果治疗效应。只有13项研究，不继续堆砌协变量找显著。</p>
+<h2 id="9">9. 森林图、漏斗图与报告</h2>
+<pre><code class="language-r">source('R/04_outputs.R',encoding='UTF-8')
+finish(config$packages)
+</code></pre>
+<p>打开<code>learning/my_output/REPORT.html</code>。</p>
+<p>森林图每行是研究RR和区间，方块大小反映权重，菱形是合并均值及区间；横轴对数尺度，1表示两组相同。漏斗图横轴logRR、纵轴标准误，图形不对称不自动证明发表偏倚；异质性和研究设计也会影响。</p>
+<p>报告按：数据集从哪里来 → 效应量怎么算 → 主模型及预测区间 → 敏感性 → 探索性结果 → 证据限制。不要放虚构PRISMA流程图；如果今后真正开展系统综述，应另建检索式、数据库/日期、双人筛选、排除理由、数据提取和RoB记录。</p>
+<h2 id="10">10. 验收与测试</h2>
+<pre><code class="language-powershell">&amp; 'C:\Program Files\R\R-4.6.0\bin\Rscript.exe' learning/guide_examples.R
+&amp; 'C:\Program Files\R\R-4.6.0\bin\Rscript.exe' run.R
+&amp; 'C:\Program Files\R\R-4.6.0\bin\Rscript.exe' tests/test.R
+</code></pre>
+<p>预期15项运行断言、6组测试通过。测试覆盖手算logRR与方差、交换组别后的符号/方差关系、合并结果复算、权重均值恒等式和整体方向翻转。</p>
+<table>
+<thead>
+<tr>
+<th>输出</th>
+<th>要解释的内容</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>study_effects / allocation_counts</td>
+<td>13行研究、计数、分配、yi/vi</td>
+</tr>
+<tr>
+<td>pooled_effect / forest_table</td>
+<td>RR、CI、PI、异质性和权重</td>
+</tr>
+<tr>
+<td>sensitivity / leave_one_out</td>
+<td>3种分析、13次逐研究剔除</td>
+</tr>
+<tr>
+<td>exploratory_meta_regression</td>
+<td>研究层面纬度系数及限制</td>
+</tr>
+<tr>
+<td>forest/funnel/leave_one_out PNG</td>
+<td>图形口径与表格一致</td>
+</tr>
+<tr>
+<td>input_provenance / validation_checks</td>
+<td>来源与15项检查</td>
+</tr>
+<tr>
+<td>package_versions / sessionInfo</td>
+<td>包版本和运行环境</td>
+</tr>
+</tbody>
+</table>
+<h2 id="11">11. 常见问题和自测</h2>
+<table>
+<thead>
+<tr>
+<th>问题</th>
+<th>排查</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>there is no package called…</td>
+<td>从仓库根目录运行setup.R；确认.Rlibrary存在</td>
+</tr>
+<tr>
+<td>数据哈希变了</td>
+<td>核对metadat版本和数据，不直接修改expected_md5</td>
+</tr>
+<tr>
+<td>合并值与网上示例不同</td>
+<td>查REML/DL、knha/z、数据子集、效应量尺度</td>
+</tr>
+<tr>
+<td>RR方向反了</td>
+<td>确认t组始终为BCG、c组始终为对照</td>
+</tr>
+<tr>
+<td>区间太宽</td>
+<td>可能反映真实不确定性，不能靠删研究解决</td>
+</tr>
+<tr>
+<td>森林图RR和模型系数不同</td>
+<td>模型在log尺度，图用exp转换</td>
+</tr>
+</tbody>
+</table>
+<p>自测：①手算玩具RR/方差；②解释为何大研究不占100%权重；③分别解释均值CI和预测区间；④说明为什么不是13项RCT；⑤说明为什么这不是系统综述；⑥不看代码讲清逐一剔除会重新估计哪些参数。</p></main></div></body></html>
